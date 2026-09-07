@@ -284,7 +284,22 @@
 </div>
 
 <script>
-const S = window.storage;
+// Standalone version: uses the browser's localStorage instead of the
+// Claude-artifact-only window.storage API, so this file works when opened
+// directly (double-clicked, or from any web server) in any browser.
+// Note: localStorage is per-browser, per-device — it won't sync between
+// devices or between tutor/student unless they're using the same browser.
+const S = {
+  async get(key){
+    const raw = localStorage.getItem('cmt:'+key);
+    if(raw === null) return null;
+    return {value: raw};
+  },
+  async set(key, value){
+    localStorage.setItem('cmt:'+key, value);
+    return {value};
+  }
+};
 let sessions = [];
 let records = [];
 let topics = [];
