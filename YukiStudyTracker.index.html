@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Core Math Progress Tracker</title>
+<style>
+  :root{
+    --paper:#F8F8F5;
+    --paper-line:#E4E4DC;
+    --ink:#1E2621;
+    --ink-soft:#54604F;
+    --board:#1F4D3D;
+    --board-dark:#163A2E;
+    --chalk:#E8B93F;
+    --ok:#3A7D5C;
+    --ok-bg:#E7F1EA;
+    --warn:#B87A22;
+    --warn-bg:#FBEED9;
+    --bad:#B5432E;
+    --bad-bg:#F8E4DF;
+    --neutral:#7B7B70;
+    --neutral-bg:#EFEFE9;
+    --line:#D8D8CE;
+    --white:#FFFFFF;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family: "Iowan Old Style","Palatino Linotype","Georgia",serif;
+    color:var(--ink);
+    background:
+      linear-gradient(var(--paper-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--paper-line) 1px, transparent 1px),
+      var(--paper);
+    background-size: 28px 28px;
+    min-height:100vh;
+    padding: 28px 16px 60px;
+  }
+  .wrap{max-width:880px;margin:0 auto;}
+  header{margin-bottom:22px;}
+  h1{font-size:28px;margin:0 0 4px;font-weight:600;letter-spacing:.2px;color:var(--board-dark);}
+  .subtitle{font-size:14px;color:var(--ink-soft);font-family:"JetBrains Mono","SF Mono",monospace;}
+  nav{display:flex;gap:2px;margin:22px 0 18px;border-bottom:2px solid var(--board-dark);flex-wrap:wrap;}
+  nav button{font-family:inherit;font-size:14.5px;padding:9px 14px;border:none;background:transparent;color:var(--ink-soft);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:color .15s;}
+  nav button.active{color:var(--board-dark);font-weight:600;border-bottom:2px solid var(--chalk);}
+  nav button:hover{color:var(--board-dark);}
+  section.panel{display:none;}
+  section.panel.active{display:block;animation:fade .2s ease;}
+  @keyframes fade{from{opacity:0;transform:translateY(3px);}to{opacity:1;transform:translateY(0);}}
+  .card{background:var(--white);border:1px solid var(--line);border-radius:3px;padding:18px 20px;margin-bottom:16px;}
+  .card h2{font-size:16px;margin:0 0 14px;color:var(--board-dark);font-weight:600;}
+  label{display:block;font-size:12.5px;color:var(--ink-soft);margin:10px 0 4px;font-family:"JetBrains Mono","SF Mono",monospace;}
+  label:first-child{margin-top:0;}
+  input[type=text], input[type=date], input[type=number], textarea, select{
+    width:100%;font-family:inherit;font-size:14.5px;padding:8px 10px;border:1px solid var(--line);
+    border-radius:3px;background:#FDFDFB;color:var(--ink);
+  }
+  textarea{resize:vertical;min-height:52px;}
+  input:focus, textarea:focus, select:focus{outline:2px solid var(--chalk);outline-offset:0;border-color:var(--chalk);}
+  .row{display:flex;gap:12px;flex-wrap:wrap;}
+  .row > div{flex:1;min-width:150px;}
+  .btn{font-family:inherit;font-size:14px;padding:8px 18px;border-radius:3px;border:1px solid var(--board-dark);background:var(--board-dark);color:var(--white);cursor:pointer;margin-top:14px;}
+  .btn:hover{background:var(--board);}
+  .btn.ghost{background:transparent;color:var(--board-dark);}
+  .btn.small{padding:5px 12px;font-size:12.5px;margin-top:0;}
+  .entry-list{margin-top:4px;}
+  .entry{border-top:1px solid var(--line);padding:12px 0;display:flex;justify-content:space-between;gap:14px;}
+  .entry:first-child{border-top:none;}
+  .entry .meta{font-family:"JetBrains Mono","SF Mono",monospace;font-size:12px;color:var(--ink-soft);margin-bottom:3px;}
+  .entry .body{font-size:14.5px;line-height:1.5;white-space:pre-wrap;}
+  .entry .del{background:none;border:none;color:var(--ink-soft);cursor:pointer;font-size:12px;font-family:"JetBrains Mono",monospace;height:fit-content;}
+  .entry .del:hover{color:var(--bad);}
+  .tag{display:inline-block;font-family:"JetBrains Mono","SF Mono",monospace;font-size:11px;padding:2px 7px;border-radius:3px;background:var(--paper);border:1px solid var(--line);color:var(--ink-soft);margin:2px 4px 2px 0;}
+  .badge{display:inline-block;font-family:"JetBrains Mono",monospace;font-size:11px;padding:2px 8px;border-radius:3px;margin-top:4px;}
+  .badge.ok{background:var(--ok-bg);color:var(--ok);}
+  .badge.warn{background:var(--warn-bg);color:var(--warn);}
+  .empty{color:var(--ink-soft);font-size:14px;padding:6px 0;}
+  table{width:100%;border-collapse:collapse;}
+  th{text-align:left;font-family:"JetBrains Mono","SF Mono",monospace;font-size:11px;color:var(--ink-soft);padding:6px 8px;border-bottom:1px solid var(--board-dark);}
+  td{padding:9px 8px;border-bottom:1px solid var(--line);font-size:14px;vertical-align:top;}
+  .sec-badge{display:inline-block;font-family:"JetBrains Mono",monospace;font-size:10px;padding:1px 5px;border-radius:2px;background:var(--paper);border:1px solid var(--line);color:var(--ink-soft);margin-right:3px;}
+  .status-cell{display:flex;align-items:center;gap:8px;min-width:170px;}
+  .status-cell input[type=range]{flex:1;accent-color:var(--board-dark);}
+  .status-num{font-family:"JetBrains Mono",monospace;font-size:13px;width:34px;text-align:right;}
+  .band-label{font-family:"JetBrains Mono",monospace;font-size:10.5px;padding:1px 6px;border-radius:2px;white-space:nowrap;}
+  .band-label.ok{background:var(--ok-bg);color:var(--ok);}
+  .band-label.warn{background:var(--warn-bg);color:var(--warn);}
+  .band-label.bad{background:var(--bad-bg);color:var(--bad);}
+  .band-label.neutral{background:var(--neutral-bg);color:var(--neutral);}
+  .meta-small{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--ink-soft);margin-top:3px;}
+  .topic-notes{width:100%;font-size:12.5px;padding:4px 6px;min-height:32px;margin-top:4px;}
+  .topic-del{background:none;border:none;color:var(--line);cursor:pointer;font-size:13px;float:right;}
+  .topic-del:hover{color:var(--bad);}
+  .month-nav{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
+  .month-nav button{background:none;border:1px solid var(--line);border-radius:3px;width:28px;height:28px;cursor:pointer;color:var(--board-dark);font-size:14px;}
+  .month-label{font-family:"JetBrains Mono",monospace;font-size:15px;font-weight:600;color:var(--board-dark);}
+  .stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;}
+  .stat{background:var(--white);border:1px solid var(--line);border-radius:3px;padding:14px 16px;}
+  .stat .num{font-size:26px;font-weight:600;color:var(--board-dark);font-family:"JetBrains Mono",monospace;}
+  .stat .label{font-size:12px;color:var(--ink-soft);margin-top:2px;}
+  .breakdown-row{display:flex;justify-content:space-between;padding:7px 0;border-top:1px solid var(--line);font-size:14px;}
+  .breakdown-row:first-child{border-top:none;}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:8px;}
+  .save-note{font-size:11.5px;color:var(--ink-soft);font-family:"JetBrains Mono",monospace;margin-top:6px;min-height:14px;}
+  .checklist{max-height:150px;overflow-y:auto;border:1px solid var(--line);border-radius:3px;padding:8px 10px;background:#FDFDFB;}
+  .checklist label{display:flex;align-items:center;gap:6px;font-family:inherit;font-size:13px;color:var(--ink);margin:4px 0;text-transform:none;}
+  .checklist input{width:auto;}
+  .priority-item{display:flex;justify-content:space-between;padding:9px 0;border-top:1px solid var(--line);font-size:14px;align-items:center;}
+  .priority-item:first-child{border-top:none;}
+  .priority-item .name{flex:1;}
+  .subhead{font-size:12.5px;color:var(--ink-soft);margin:14px 0 6px;font-family:"JetBrains Mono",monospace;}
+  .subhead:first-child{margin-top:0;}
+  .estimate-result{font-size:15px;margin-top:12px;padding:12px 14px;border-radius:3px;background:var(--paper);border:1px solid var(--line);}
+  .estimate-result .grade{font-size:22px;font-weight:600;color:var(--board-dark);font-family:"JetBrains Mono",monospace;}
+  svg text{font-family:"JetBrains Mono",monospace;}
+  @media print{
+    nav, .btn, input, select, textarea, .month-nav button, .del, .topic-del, .checklist{display:none !important;}
+    body{background:none;padding:0;}
+    .panel{display:none !important;}
+    #tab-summary.active{display:block !important;}
+    .card{border:none;padding:0;margin-bottom:20px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Core Math Progress Tracker</h1>
+    <div class="subtitle">shared record · tutor + student</div>
+  </header>
+
+  <nav>
+    <button class="tab-btn active" data-tab="teacher">Sessions</button>
+    <button class="tab-btn" data-tab="student">Practice log</button>
+    <button class="tab-btn" data-tab="topics">Topic status</button>
+    <button class="tab-btn" data-tab="summary">Monthly summary</button>
+  </nav>
+
+  <!-- TEACHER -->
+  <section class="panel active" id="tab-teacher">
+    <div class="card">
+      <h2>Log a session</h2>
+      <label>Date</label><input type="date" id="s-date">
+      <label>What was taught</label>
+      <textarea id="s-content" placeholder="e.g. Quadratic equations — completing the square, discriminant"></textarea>
+      <label>Homework assigned</label>
+      <textarea id="s-hw" placeholder="e.g. Ex 3B Q1-15, past paper 2023 Paper 1 Section A(1)"></textarea>
+      <button class="btn" id="s-add">Add session</button>
+      <div class="save-note" id="s-note"></div>
+    </div>
+    <div class="card">
+      <h2>Session history</h2>
+      <div class="entry-list" id="s-list"><div class="empty">Loading…</div></div>
+    </div>
+  </section>
+
+  <!-- STUDENT -->
+  <section class="panel" id="tab-student">
+    <div class="card">
+      <h2>Log practice</h2>
+      <label>Type</label>
+      <select id="r-type">
+        <option value="paper1-a1">Paper 1 — Section A(1)</option>
+        <option value="paper1-a2">Paper 1 — Section A(2)</option>
+        <option value="paper1-b">Paper 1 — Section B</option>
+        <option value="paper1-full">Paper 1 — Full paper</option>
+        <option value="paper2">Paper 2 (MC)</option>
+        <option value="topic">Topic exercise</option>
+      </select>
+
+      <div id="r-paper-fields">
+        <div class="row">
+          <div>
+            <label>Source</label>
+            <select id="r-source">
+              <option value="dse">DSE past paper</option>
+              <option value="mock">Mock paper</option>
+              <option value="school">School paper</option>
+            </select>
+          </div>
+          <div id="r-year-wrap"><label>DSE year</label><select id="r-year"></select></div>
+          <div id="r-label-wrap" style="display:none;"><label>Paper name</label><input type="text" id="r-label" placeholder="e.g. Mock 2, Term 1 exam"></div>
+        </div>
+        <div class="row">
+          <div><label>Score (out of <span id="r-score-max">35</span>)</label><input type="number" id="r-score" min="0" step="0.5"></div>
+          <div><label>Careless mistakes</label><input type="number" id="r-careless" min="0" step="1"></div>
+          <div>
+            <label>Self-rating</label>
+            <select id="r-selfassess">
+              <option value="">—</option>
+              <option value="satisfied">Satisfied</option>
+              <option value="improve">Needs improvement</option>
+            </select>
+          </div>
+        </div>
+        <label>Unfamiliar topics (tap all that apply)</label>
+        <div class="checklist" id="r-unfamiliar-list"></div>
+      </div>
+
+      <div id="r-topic-fields" style="display:none;">
+        <label>Topic</label>
+        <select id="r-topic"></select>
+        <label>Accuracy this attempt (%, optional)</label>
+        <input type="number" id="r-accuracy" min="0" max="100" step="1">
+      </div>
+
+      <label>Date done</label>
+      <input type="date" id="r-date">
+      <label>Notes</label>
+      <textarea id="r-notes" placeholder="e.g. mistakes on log equations"></textarea>
+      <button class="btn" id="r-add">Add record</button>
+      <div class="save-note" id="r-note"></div>
+    </div>
+
+    <div class="card">
+      <h2>Grade estimator</h2>
+      <div class="row">
+        <div><label>Paper 1 mark (/105)</label><input type="number" id="g-p1" min="0" max="105"></div>
+        <div><label>Paper 2 mark (/45)</label><input type="number" id="g-p2" min="0" max="45"></div>
+        <div><label>Reference year</label><select id="g-year"></select></div>
+      </div>
+      <button class="btn small" id="g-calc">Estimate grade</button>
+      <div id="g-result"></div>
+    </div>
+
+    <div class="card">
+      <h2>Practice history</h2>
+      <div class="entry-list" id="r-list"><div class="empty">Loading…</div></div>
+    </div>
+  </section>
+
+  <!-- TOPICS -->
+  <section class="panel" id="tab-topics">
+    <div class="card" id="priority-card">
+      <h2>Priority to drill</h2>
+      <div id="priority-list"><div class="empty">Loading…</div></div>
+    </div>
+    <div class="card">
+      <h2>Add a topic</h2>
+      <div class="row">
+        <div><input type="text" id="t-new" placeholder="e.g. Trigonometric identities"></div>
+        <div style="flex:0 0 auto;"><button class="btn small" id="t-add">Add</button></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Topic status</h2>
+      <table>
+        <thead><tr><th>Topic</th><th>Status (%)</th><th>Last practiced</th><th>Recent avg</th></tr></thead>
+        <tbody id="t-list"><tr><td colspan="4" class="empty">Loading…</td></tr></tbody>
+      </table>
+      <div class="save-note" id="t-note"></div>
+    </div>
+  </section>
+
+  <!-- SUMMARY -->
+  <section class="panel" id="tab-summary">
+    <div class="month-nav">
+      <button id="m-prev">‹</button>
+      <span class="month-label" id="m-label"></span>
+      <button id="m-next">›</button>
+      <button class="btn small ghost" id="m-print" style="margin-left:auto;">Print summary</button>
+    </div>
+    <div class="stat-grid">
+      <div class="stat"><div class="num" id="m-sessions">0</div><div class="label">sessions taught</div></div>
+      <div class="stat"><div class="num" id="m-papers">0</div><div class="label">past papers done</div></div>
+      <div class="stat"><div class="num" id="m-topics">0</div><div class="label">topic exercises done</div></div>
+    </div>
+    <div class="card">
+      <h2>Past paper breakdown this month</h2>
+      <div class="subhead">By section</div>
+      <div id="m-paper-breakdown"><div class="empty">No records this month.</div></div>
+      <div class="subhead">By source</div>
+      <div id="m-source-breakdown"></div>
+    </div>
+    <div class="card">
+      <h2>Topic status snapshot</h2>
+      <div id="m-topic-breakdown"><div class="empty">No topics yet.</div></div>
+    </div>
+    <div class="card">
+      <h2>Score trend (full-length attempts)</h2>
+      <div id="m-trend"><div class="empty">Not enough full-paper attempts yet.</div></div>
+    </div>
+  </section>
+</div>
+
+<script>
+// ====== SHARED STORAGE (JSONBin.io) ======
+// TODO: paste YOUR OWN Bin ID and X-Master-Key from jsonbin.io here.
+const JSONBIN_BIN_ID = "6a9f0e46ffd5d16053ea7eeb";
+const JSONBIN_MASTER_KEY = "$2a$10$M4JIwISETxzbnfjqcHd2teqJ.MEcKUzgb1S.fqvOETR99ft6YU2l2";
+const CONFIG_IS_PLACEHOLDER = JSONBIN_BIN_ID === "6a9f0e46ffd5d16053ea7eeb";
+
+const JSONBIN_URL = `https://api.jsonbin.io/v3/b/${JSONBIN_BIN_ID}`;
+const JSONBIN_HEADERS = {
+  "Content-Type": "application/json",
+  "X-Master-Key": JSONBIN_MASTER_KEY
+};
+
+async function jsonbinRead(){
+  const res = await fetch(JSONBIN_URL + "/latest", { headers: JSONBIN_HEADERS });
+  if(!res.ok) throw new Error("JSONBin read failed: " + res.status);
+  const json = await res.json();
+  return json.record || {};
+}
+async function jsonbinWrite(record){
+  const res = await fetch(JSONBIN_URL, {
+    method: "PUT",
+    headers: JSONBIN_HEADERS,
+    body: JSON.stringify(record)
+  });
+  if(!res.ok) throw new Error("JSONBin write failed: " + res.status);
+}
+
+let sessions = [];
+let records = [];
+let topics = [];
+let currentMonth = new Date();
+currentMonth.setDate(1);
+
+const DEFAULT_TOPICS = [
+  ["Indices 指數",["A1"]],
+  ["Change of subject 主項變換",["A1"]],
+  ["Factorization 因式分解",["A1"]],
+  ["Rounding 上/下捨入",["A1"]],
+  ["Error 誤差",["A1"]],
+  ["Ratio 比例",["A1"]],
+  ["Simultaneous equations 聯立方程",["A1"]],
+  ["Percentage 百分數",["A1"]],
+  ["Inequality 不等式",["A1"]],
+  ["Mean / mode / median 平均數 眾數 中位數",["A1"]],
+  ["Simple probability 概率的認識",["A1"]],
+  ["Similar & congruent triangles 相似全等三角形",["A1"]],
+  ["Coordinate geometry — basics (slope/translation) 座標幾何",["A1"]],
+  ["Polar coordinates 極座標",["A1"]],
+  ["Properties of circles 圓形性質",["A1"]],
+  ["Variations 變分",["A2"]],
+  ["Equations of straight lines + basic geometry 直線方程+普通幾何",["A2"]],
+  ["Range / IQR / S.D. 分佈域 四分位數間距 標準差",["A2"]],
+  ["Mensuration 求積法",["A2"]],
+  ["Polynomials 多項式",["A2"]],
+  ["Equations of circles 圓方程",["A2","B"]],
+  ["Locus 軌跡",["A2","B"]],
+  ["Sum & product of roots 根的和及積",["B"]],
+  ["Logarithms 對數",["B"]],
+  ["Permutation, combination & probability 排列組合概率",["B"]],
+  ["Linear programming 線性規劃",["B"]],
+  ["Standard score + adding/removing data 標準分/加減數據",["B"]],
+  ["Completing the square 配方法",["B"]],
+  ["Transformation of graphs 圖像轉換",["B"]],
+  ["Tangents to circles 圓切線",["B"]],
+  ["Arithmetic & geometric sequences 等差等比數列",["B"]],
+  ["2D trigonometry 平面三角學",["B"]],
+  ["3D trigonometry 立體三角學",["B"]],
+  ["Coordinate geometry — circle centres 座標幾何(四心)",["B"]]
+];
+
+const PAPER_META = {
+  "paper1-a1": {label:"Paper 1 · Section A(1)", max:35},
+  "paper1-a2": {label:"Paper 1 · Section A(2)", max:35},
+  "paper1-b":  {label:"Paper 1 · Section B", max:35},
+  "paper1-full": {label:"Paper 1 · Full paper", max:105},
+  "paper2": {label:"Paper 2 (MC)", max:45}
+};
+const SOURCE_LABEL = {dse:"DSE past paper", mock:"Mock paper", school:"School paper"};
+
+const GRADE_CUTOFFS = {
+  2025:{"5**":90,"5*":83,"5":74,"4":62,"3":49,"2":null},
+  2024:{"5**":95,"5*":89,"5":81,"4":65,"3":51,"2":null},
+  2023:{"5**":90,"5*":82,"5":74,"4":59,"3":54,"2":33},
+  2022:{"5**":94,"5*":87,"5":80,"4":68,"3":61,"2":49},
+  2021:{"5**":90,"5*":84,"5":76,"4":62,"3":55,"2":null},
+  2020:{"5**":94,"5*":87,"5":79,"4":62,"3":49,"2":null},
+  2019:{"5**":90,"5*":84,"5":76,"4":65,"3":53,"2":null}
+};
+function computeAverageCutoffs(){
+  const grades = ["5**","5*","5","4","3","2"];
+  const avg = {};
+  grades.forEach(g=>{
+    const vals = Object.values(GRADE_CUTOFFS).map(y=>y[g]).filter(v=>v!=null);
+    avg[g] = vals.length? Math.round(vals.reduce((a,b)=>a+b,0)/vals.length) : null;
+  });
+  return avg;
+}
+const AVG_CUTOFFS = computeAverageCutoffs();
+
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function fmtDate(d){ if(!d) return ""; const dt=new Date(d+"T00:00:00"); return dt.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}); }
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+function escapeHtml(str){ if(!str) return ''; return str.replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+let bootstrapped = false;
+
+function renderEverything(){
+  renderSessions();
+  renderRecords();
+  renderTopics();
+  renderPriority();
+  renderSummary();
+}
+
+function currentRecord(){
+  return { sessions, records_v2: records, topics_v2: topics };
+}
+
+async function pullFromBin(){
+  const record = await jsonbinRead();
+  sessions = record.sessions || [];
+  records = record.records_v2 || [];
+  if(record.topics_v2 && record.topics_v2.length){
+    topics = record.topics_v2;
+  } else if(!bootstrapped){
+    // No topics saved yet anywhere — seed the defaults once.
+    topics = DEFAULT_TOPICS.map(([name,sections])=>({id:uid(), name, sections, status:null, note:''}));
+    await jsonbinWrite(currentRecord());
+  }
+
+  if(!bootstrapped){
+    bootstrapped = true;
+    populateYearSelect();
+    populateGradeYearSelect();
+  }
+  // Re-run these every update too, in case a topic was added/removed
+  // on another device.
+  populateTopicSelect();
+  populateUnfamiliarChecklist();
+  renderEverything();
+}
+
+async function loadAll(){
+  if(CONFIG_IS_PLACEHOLDER){
+    document.body.insertAdjacentHTML('afterbegin',
+      '<div style="background:#B5432E;color:#fff;padding:12px 18px;font-family:monospace;font-size:13px;">'+
+      'Shared storage isn\'t set up yet — paste your JSONBin Bin ID and Master Key into the &lt;script&gt; near the top of this file (look for "PASTE_YOUR_BIN_ID").'+
+      '</div>');
+    topics = DEFAULT_TOPICS.map(([name,sections])=>({id:uid(), name, sections, status:null, note:''}));
+    populateYearSelect(); populateGradeYearSelect(); populateTopicSelect(); populateUnfamiliarChecklist();
+    renderEverything();
+    return;
+  }
+
+  try{
+    await pullFromBin();
+  }catch(e){
+    console.error(e);
+    alert('Could not connect to the shared tracker. Check your Bin ID / Master Key are correct, and your internet connection.');
+  }
+
+  // JSONBin has no live-push like Firestore, so poll periodically —
+  // changes made on the other device will appear within a few seconds.
+  setInterval(async ()=>{
+    try{ await pullFromBin(); }catch(e){ console.error(e); }
+  }, 5000);
+}
+
+async function saveSessions(noteEl){
+  try{ await jsonbinWrite(currentRecord()); flash(noteEl); }
+  catch(e){ if(noteEl) noteEl.textContent = "Could not save — check your connection."; throw e; }
+}
+async function saveRecords(noteEl){
+  try{ await jsonbinWrite(currentRecord()); flash(noteEl); }
+  catch(e){ if(noteEl) noteEl.textContent = "Could not save — check your connection."; throw e; }
+}
+async function saveTopics(noteEl){
+  try{ await jsonbinWrite(currentRecord()); if(noteEl) flash(noteEl); }
+  catch(e){ if(noteEl) noteEl.textContent = "Could not save — check your connection."; throw e; }
+}
+function flash(el){ if(!el) return; el.textContent = "Saved."; setTimeout(()=>{ if(el.textContent==="Saved.") el.textContent=""; }, 1800); }
+
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+  });
+});
+
+/* ---------- SESSIONS ---------- */
+document.getElementById('s-date').value = todayStr();
+document.getElementById('s-add').addEventListener('click', async ()=>{
+  const date = document.getElementById('s-date').value || todayStr();
+  const content = document.getElementById('s-content').value.trim();
+  const hw = document.getElementById('s-hw').value.trim();
+  if(!content && !hw) return;
+  sessions.push({id:uid(), date, content, hw});
+  document.getElementById('s-content').value=''; document.getElementById('s-hw').value='';
+  renderSessions(); renderSummary();
+  const note = document.getElementById('s-note'); note.textContent = "Saving…";
+  try{ await saveSessions(note); }catch(e){ note.textContent = "Could not save — try again."; }
+});
+function renderSessions(){
+  const list = document.getElementById('s-list');
+  if(sessions.length===0){ list.innerHTML='<div class="empty">No sessions logged yet.</div>'; return; }
+  const sorted = [...sessions].sort((a,b)=> b.date.localeCompare(a.date));
+  list.innerHTML = sorted.map(s=>`
+    <div class="entry" data-id="${s.id}">
+      <div style="flex:1;">
+        <div class="meta">${fmtDate(s.date)}</div>
+        <div class="body">${escapeHtml(s.content)||'<span class="empty">—</span>'}</div>
+        ${s.hw ? `<div class="body" style="margin-top:6px;color:var(--ink-soft);font-size:13.5px;">Homework: ${escapeHtml(s.hw)}</div>` : ''}
+      </div>
+      <button class="del" data-id="${s.id}">remove</button>
+    </div>`).join('');
+  list.querySelectorAll('.del').forEach(b=>b.addEventListener('click', async ()=>{
+    sessions = sessions.filter(s=>s.id!==b.dataset.id);
+    renderSessions(); renderSummary(); await saveSessions();
+  }));
+}
+
+/* ---------- PRACTICE FORM ---------- */
+function populateYearSelect(){
+  const sel = document.getElementById('r-year');
+  const nowYear = new Date().getFullYear();
+  let opts = '';
+  for(let y=nowYear; y>=2012; y--){ opts += `<option value="${y}">${y}</option>`; }
+  sel.innerHTML = opts;
+}
+function populateGradeYearSelect(){
+  const sel = document.getElementById('g-year');
+  const years = Object.keys(GRADE_CUTOFFS).sort((a,b)=>b-a);
+  sel.innerHTML = `<option value="avg">Average of ${years[years.length-1]}-${years[0]}</option>` +
+    years.map(y=>`<option value="${y}">${y}</option>`).join('');
+}
+function populateTopicSelect(){
+  document.getElementById('r-topic').innerHTML = topics.map(t=>`<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
+}
+function populateUnfamiliarChecklist(){
+  const box = document.getElementById('r-unfamiliar-list');
+  if(topics.length===0){ box.innerHTML = '<div class="empty">No topics yet.</div>'; return; }
+  box.innerHTML = topics.map(t=>`<label><input type="checkbox" value="${t.id}"> ${escapeHtml(t.name)}</label>`).join('');
+}
+
+function updateFormVisibility(){
+  const type = document.getElementById('r-type').value;
+  const isTopic = type === 'topic';
+  document.getElementById('r-paper-fields').style.display = isTopic ? 'none' : 'block';
+  document.getElementById('r-topic-fields').style.display = isTopic ? 'block' : 'none';
+  if(!isTopic){ document.getElementById('r-score-max').textContent = PAPER_META[type].max; }
+}
+document.getElementById('r-type').addEventListener('change', updateFormVisibility);
+document.getElementById('r-source').addEventListener('change', ()=>{
+  const isDse = document.getElementById('r-source').value === 'dse';
+  document.getElementById('r-year-wrap').style.display = isDse ? 'block' : 'none';
+  document.getElementById('r-label-wrap').style.display = isDse ? 'none' : 'block';
+});
+updateFormVisibility();
+
+document.getElementById('r-date').value = todayStr();
+document.getElementById('r-add').addEventListener('click', async ()=>{
+  const type = document.getElementById('r-type').value;
+  const date = document.getElementById('r-date').value || todayStr();
+  const notes = document.getElementById('r-notes').value.trim();
+
+  let rec;
+  if(type === 'topic'){
+    const topicId = document.getElementById('r-topic').value;
+    const accRaw = document.getElementById('r-accuracy').value;
+    rec = {id:uid(), kind:'topicex', topicId, date, accuracy: accRaw===''? null : Number(accRaw), notes};
+    document.getElementById('r-accuracy').value = '';
+  } else {
+    const source = document.getElementById('r-source').value;
+    const scoreRaw = document.getElementById('r-score').value;
+    const carelessRaw = document.getElementById('r-careless').value;
+    const unfamiliar = Array.from(document.querySelectorAll('#r-unfamiliar-list input:checked')).map(i=>i.value);
+    rec = {
+      id:uid(), kind:'paper', ptype:type, source, date,
+      year: source==='dse' ? document.getElementById('r-year').value : null,
+      label: source!=='dse' ? document.getElementById('r-label').value.trim() : null,
+      score: scoreRaw===''? null : Number(scoreRaw),
+      maxMark: PAPER_META[type].max,
+      careless: carelessRaw===''? null : Number(carelessRaw),
+      selfAssess: document.getElementById('r-selfassess').value,
+      unfamiliar, notes
+    };
+    document.getElementById('r-score').value=''; document.getElementById('r-careless').value='';
+    document.getElementById('r-selfassess').value=''; document.getElementById('r-label').value='';
+    document.querySelectorAll('#r-unfamiliar-list input:checked').forEach(i=>i.checked=false);
+  }
+  document.getElementById('r-notes').value='';
+  records.push(rec);
+  renderRecords(); renderTopics(); renderPriority(); renderSummary();
+  const note = document.getElementById('r-note'); note.textContent = "Saving…";
+  try{ await saveRecords(note); }catch(e){ note.textContent = "Could not save — try again."; }
+});
+
+function renderRecords(){
+  const list = document.getElementById('r-list');
+  if(records.length===0){ list.innerHTML='<div class="empty">No practice logged yet.</div>'; return; }
+  const sorted = [...records].sort((a,b)=> b.date.localeCompare(a.date));
+  list.innerHTML = sorted.map(r=>{
+    if(r.kind==='topicex'){
+      const topic = topics.find(t=>t.id===r.topicId);
+      return `<div class="entry" data-id="${r.id}">
+        <div style="flex:1;">
+          <div class="meta">${fmtDate(r.date)}</div>
+          <div class="body">Topic exercise <span class="tag">${escapeHtml(topic?topic.name:'deleted topic')}</span></div>
+          ${r.accuracy!=null ? `<div class="meta-small">Accuracy: ${r.accuracy}%</div>` : ''}
+          ${r.notes ? `<div class="body" style="margin-top:4px;color:var(--ink-soft);font-size:13.5px;">${escapeHtml(r.notes)}</div>` : ''}
+        </div>
+        <button class="del" data-id="${r.id}">remove</button>
+      </div>`;
+    } else {
+      const meta = PAPER_META[r.ptype] || {label:r.ptype, max:r.maxMark};
+      const srcLabel = SOURCE_LABEL[r.source] || r.source;
+      const yearOrLabel = r.source==='dse' ? r.year : (r.label || '');
+      const pctTxt = r.score!=null ? ` — ${r.score}/${r.maxMark} (${Math.round(r.score/r.maxMark*100)}%)` : '';
+      const unfamTags = (r.unfamiliar||[]).map(id=>{
+        const t = topics.find(x=>x.id===id);
+        return t ? `<span class="tag">${escapeHtml(t.name)}</span>` : '';
+      }).join('');
+      let assessBadge = '';
+      if(r.selfAssess==='satisfied') assessBadge = '<span class="badge ok">Satisfied</span>';
+      else if(r.selfAssess==='improve') assessBadge = '<span class="badge warn">Needs improvement</span>';
+      return `<div class="entry" data-id="${r.id}">
+        <div style="flex:1;">
+          <div class="meta">${fmtDate(r.date)}</div>
+          <div class="body">${meta.label}${pctTxt} <span class="tag">${srcLabel}${yearOrLabel? ' · '+escapeHtml(String(yearOrLabel)):''}</span></div>
+          ${r.careless!=null ? `<div class="meta-small">Careless mistakes: ${r.careless}</div>` : ''}
+          ${unfamTags ? `<div style="margin-top:4px;">${unfamTags}</div>` : ''}
+          ${assessBadge}
+          ${r.notes ? `<div class="body" style="margin-top:4px;color:var(--ink-soft);font-size:13.5px;">${escapeHtml(r.notes)}</div>` : ''}
+        </div>
+        <button class="del" data-id="${r.id}">remove</button>
+      </div>`;
+    }
+  }).join('');
+  list.querySelectorAll('.del').forEach(b=>b.addEventListener('click', async ()=>{
+    records = records.filter(r=>r.id!==b.dataset.id);
+    renderRecords(); renderTopics(); renderPriority(); renderSummary();
+    await saveRecords();
+  }));
+}
+
+/* ---------- GRADE ESTIMATOR ---------- */
+function estimateGrade(p1, p2, yearKey){
+  const pct = ((p1||0)+(p2||0))/150*100;
+  const cutoffs = yearKey==='avg' ? AVG_CUTOFFS : GRADE_CUTOFFS[yearKey];
+  const order = ["5**","5*","5","4","3","2"];
+  for(const g of order){
+    const th = cutoffs[g];
+    if(th!=null && pct>=th) return {grade:g, pct};
+  }
+  return {grade:"below 2", pct};
+}
+document.getElementById('g-calc').addEventListener('click', ()=>{
+  const p1 = Number(document.getElementById('g-p1').value)||0;
+  const p2 = Number(document.getElementById('g-p2').value)||0;
+  const yearKey = document.getElementById('g-year').value;
+  const yearNum = yearKey==='avg' ? yearKey : Number(yearKey);
+  const {grade, pct} = estimateGrade(p1, p2, yearNum);
+  const label = yearKey==='avg' ? 'averaged cutoffs' : `${yearKey} cutoffs`;
+  document.getElementById('g-result').innerHTML = `
+    <div class="estimate-result">
+      <div class="grade">Estimated grade: ${grade}</div>
+      <div class="meta-small">${p1+p2}/150 marks ≈ ${pct.toFixed(1)}%, compared against ${label}. Unofficial estimate based on tutor-circulated boundaries, not HKEAA data.</div>
+    </div>`;
+});
+
+/* ---------- TOPICS ---------- */
+document.getElementById('t-add').addEventListener('click', async ()=>{
+  const input = document.getElementById('t-new');
+  const name = input.value.trim();
+  if(!name) return;
+  topics.push({id:uid(), name, sections:[], status:null, note:''});
+  input.value='';
+  populateTopicSelect(); populateUnfamiliarChecklist();
+  renderTopics(); renderPriority(); renderSummary();
+  await saveTopics(document.getElementById('t-note'));
+});
+
+function topicStats(topicId){
+  const exs = records.filter(r=>r.kind==='topicex' && r.topicId===topicId).sort((a,b)=>b.date.localeCompare(a.date));
+  const last = exs[0]? exs[0].date : null;
+  const recentAcc = exs.slice(0,3).filter(e=>e.accuracy!=null);
+  const avg = recentAcc.length? Math.round(recentAcc.reduce((s,e)=>s+e.accuracy,0)/recentAcc.length) : null;
+  const daysAgo = last? Math.floor((Date.now()-new Date(last+"T00:00:00").getTime())/86400000) : null;
+  return {last, daysAgo, avg, count:exs.length};
+}
+function band(status){
+  if(status==null) return {label:'not rated', cls:'neutral'};
+  if(status>=80) return {label:'mastered', cls:'ok'};
+  if(status>=50) return {label:'needs drilling', cls:'warn'};
+  return {label:'not yet', cls:'bad'};
+}
+
+function renderTopics(){
+  const body = document.getElementById('t-list');
+  if(topics.length===0){ body.innerHTML='<tr><td colspan="4" class="empty">No topics yet — add one above.</td></tr>'; return; }
+  body.innerHTML = topics.map(t=>{
+    const st = topicStats(t.id);
+    const b = band(t.status);
+    const secBadges = (t.sections||[]).map(s=>`<span class="sec-badge">${s}</span>`).join('');
+    return `<tr data-id="${t.id}">
+      <td>
+        <button class="topic-del" data-id="${t.id}" title="delete topic">✕</button>
+        <div>${escapeHtml(t.name)}</div>
+        <div style="margin-top:4px;">${secBadges}</div>
+        <textarea class="topic-notes" data-id="${t.id}" placeholder="tutor note...">${escapeHtml(t.note||'')}</textarea>
+      </td>
+      <td>
+        <div class="status-cell">
+          <input type="range" min="0" max="100" step="5" value="${t.status==null?0:t.status}" data-id="${t.id}">
+          <span class="status-num" id="stnum-${t.id}">${t.status==null?'—':t.status+'%'}</span>
+        </div>
+        <div class="band-label ${b.cls}" style="margin-top:6px;display:inline-block;">${b.label}</div>
+      </td>
+      <td>${st.last ? fmtDate(st.last)+`<div class="meta-small">${st.daysAgo}d ago</div>` : '<span class="empty">never</span>'}</td>
+      <td>${st.avg!=null ? st.avg+'%' : '<span class="empty">—</span>'} <div class="meta-small">${st.count} logged</div></td>
+    </tr>`;
+  }).join('');
+
+  body.querySelectorAll('input[type=range]').forEach(r=>{
+    r.addEventListener('input', ()=>{
+      document.getElementById('stnum-'+r.dataset.id).textContent = r.value+'%';
+    });
+    r.addEventListener('change', async ()=>{
+      const t = topics.find(x=>x.id===r.dataset.id);
+      t.status = Number(r.value);
+      renderTopics(); renderPriority(); renderSummary();
+      await saveTopics(document.getElementById('t-note'));
+    });
+  });
+  body.querySelectorAll('.topic-notes').forEach(ta=>{
+    ta.addEventListener('blur', async ()=>{
+      const t = topics.find(x=>x.id===ta.dataset.id);
+      t.note = ta.value;
+      await saveTopics(document.getElementById('t-note'));
+    });
+  });
+  body.querySelectorAll('.topic-del').forEach(b=>b.addEventListener('click', async ()=>{
+    topics = topics.filter(x=>x.id!==b.dataset.id);
+    populateTopicSelect(); populateUnfamiliarChecklist();
+    renderTopics(); renderPriority(); renderSummary();
+    await saveTopics(document.getElementById('t-note'));
+  }));
+}
+
+function renderPriority(){
+  const box = document.getElementById('priority-list');
+  const items = topics.map(t=>{
+    const st = topicStats(t.id);
+    let urgency;
+    if(t.status==null) urgency = 90 + (st.count===0? 10:0);
+    else urgency = (100 - t.status) + (st.daysAgo!=null && st.daysAgo>14 ? 20 : 0) + (st.daysAgo==null ? 15 : 0);
+    return {t, st, urgency};
+  }).filter(x=> x.t.status==null || x.t.status<70)
+    .sort((a,b)=>b.urgency-a.urgency)
+    .slice(0,6);
+  if(items.length===0){ box.innerHTML = '<div class="empty">Nothing urgent — all rated topics are at 70% or above.</div>'; return; }
+  box.innerHTML = items.map(({t,st})=>{
+    const b = band(t.status);
+    const staleTxt = st.daysAgo==null ? 'never practiced' : `${st.daysAgo}d since last practice`;
+    return `<div class="priority-item">
+      <div class="name">${escapeHtml(t.name)}<div class="meta-small">${staleTxt}</div></div>
+      <div class="band-label ${b.cls}">${b.label}${t.status!=null?' · '+t.status+'%':''}</div>
+    </div>`;
+  }).join('');
+}
+
+/* ---------- SUMMARY ---------- */
+document.getElementById('m-prev').addEventListener('click', ()=>{ currentMonth.setMonth(currentMonth.getMonth()-1); renderSummary(); });
+document.getElementById('m-next').addEventListener('click', ()=>{ currentMonth.setMonth(currentMonth.getMonth()+1); renderSummary(); });
+document.getElementById('m-print').addEventListener('click', ()=>{
+  document.querySelector('.tab-btn[data-tab="summary"]').click();
+  setTimeout(()=>window.print(), 150);
+});
+
+function inMonth(dateStr, monthDate){
+  if(!dateStr) return false;
+  const d = new Date(dateStr+"T00:00:00");
+  return d.getFullYear()===monthDate.getFullYear() && d.getMonth()===monthDate.getMonth();
+}
+
+function renderSummary(){
+  document.getElementById('m-label').textContent = currentMonth.toLocaleDateString('en-GB',{month:'long',year:'numeric'});
+  const monthSessions = sessions.filter(s=>inMonth(s.date, currentMonth));
+  const monthRecords = records.filter(r=>inMonth(r.date, currentMonth));
+  const monthPapers = monthRecords.filter(r=>r.kind==='paper');
+  const monthTopicEx = monthRecords.filter(r=>r.kind==='topicex');
+
+  document.getElementById('m-sessions').textContent = monthSessions.length;
+  document.getElementById('m-papers').textContent = monthPapers.length;
+  document.getElementById('m-topics').textContent = monthTopicEx.length;
+
+  const secBreak = document.getElementById('m-paper-breakdown');
+  if(monthPapers.length===0){
+    secBreak.innerHTML = '<div class="empty">No past papers logged this month.</div>';
+  } else {
+    const counts = {};
+    monthPapers.forEach(r=>{ counts[r.ptype] = (counts[r.ptype]||0)+1; });
+    secBreak.innerHTML = Object.entries(counts).map(([type,count])=>
+      `<div class="breakdown-row"><span>${PAPER_META[type]?.label||type}</span><span class="count-pill">${count}×</span></div>`
+    ).join('');
+  }
+  const srcBreak = document.getElementById('m-source-breakdown');
+  if(monthPapers.length===0){ srcBreak.innerHTML=''; }
+  else{
+    const scounts = {};
+    monthPapers.forEach(r=>{ scounts[r.source] = (scounts[r.source]||0)+1; });
+    srcBreak.innerHTML = Object.entries(scounts).map(([src,count])=>
+      `<div class="breakdown-row"><span>${SOURCE_LABEL[src]||src}</span><span class="count-pill">${count}×</span></div>`
+    ).join('');
+  }
+
+  const topicBreak = document.getElementById('m-topic-breakdown');
+  if(topics.length===0){
+    topicBreak.innerHTML = '<div class="empty">No topics yet.</div>';
+  } else {
+    const ok = topics.filter(t=>t.status!=null && t.status>=80).length;
+    const warn = topics.filter(t=>t.status!=null && t.status>=50 && t.status<80).length;
+    const bad = topics.filter(t=>t.status!=null && t.status<50).length;
+    const none = topics.length - ok - warn - bad;
+    topicBreak.innerHTML = `
+      <div class="breakdown-row"><span><span class="dot" style="background:var(--ok)"></span>Mastered (80%+)</span><span class="count-pill">${ok}</span></div>
+      <div class="breakdown-row"><span><span class="dot" style="background:var(--warn)"></span>Needs drilling (50-79%)</span><span class="count-pill">${warn}</span></div>
+      <div class="breakdown-row"><span><span class="dot" style="background:var(--bad)"></span>Not yet (&lt;50%)</span><span class="count-pill">${bad}</span></div>
+      ${none>0 ? `<div class="breakdown-row"><span>Not yet rated</span><span class="count-pill">${none}</span></div>` : ''}
+    `;
+  }
+  renderTrend();
+}
+
+function renderTrend(){
+  const box = document.getElementById('m-trend');
+  const pts = records.filter(r=>r.kind==='paper' && r.score!=null && (r.ptype==='paper1-full' || r.ptype==='paper2'))
+    .sort((a,b)=>a.date.localeCompare(b.date));
+  if(pts.length<2){ box.innerHTML = '<div class="empty">Not enough full-paper attempts yet.</div>'; return; }
+  const w=760, h=160, pad=30;
+  const xs = pts.map((p,i)=>pad + i*((w-2*pad)/(pts.length-1||1)));
+  const pctOf = p => Math.round(p.score/p.maxMark*100);
+  const ys = pts.map(p=> h-pad - (pctOf(p)/100)*(h-2*pad));
+  const colorFor = p => p.ptype==='paper1-full' ? 'var(--board-dark)' : 'var(--chalk)';
+  let path1='', path2='';
+  let prevType=null;
+  pts.forEach((p,i)=>{
+    const cmd = (prevType===p.ptype) ? 'L' : 'M';
+    if(p.ptype==='paper1-full') path1 += `${cmd}${xs[i]},${ys[i]} `;
+    else path2 += `${cmd}${xs[i]},${ys[i]} `;
+    prevType=p.ptype;
+  });
+  const dots = pts.map((p,i)=>`<circle cx="${xs[i]}" cy="${ys[i]}" r="3.5" fill="${colorFor(p)}"></circle>`).join('');
+  box.innerHTML = `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;">
+    <line x1="${pad}" y1="${h-pad}" x2="${w-pad}" y2="${h-pad}" stroke="var(--line)"/>
+    <line x1="${pad}" y1="${pad}" x2="${pad}" y2="${h-pad}" stroke="var(--line)"/>
+    <text x="${pad-6}" y="${pad+4}" font-size="10" fill="var(--ink-soft)" text-anchor="end">100%</text>
+    <text x="${pad-6}" y="${h-pad+4}" font-size="10" fill="var(--ink-soft)" text-anchor="end">0%</text>
+    <path d="${path1}" fill="none" stroke="var(--board-dark)" stroke-width="2"/>
+    <path d="${path2}" fill="none" stroke="var(--chalk)" stroke-width="2"/>
+    ${dots}
+  </svg>
+  <div class="meta-small"><span style="color:var(--board-dark);">■</span> Paper 1 full &nbsp; <span style="color:var(--chalk);">■</span> Paper 2</div>`;
+}
+
+loadAll();
+</script>
+</body>
+</html>
